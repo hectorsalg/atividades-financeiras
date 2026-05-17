@@ -2,14 +2,35 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyToken } from '@/lib/auth';
 
-async function getFinancialActivities() {
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  return [
-    { id: 1, description: 'Assinatura Plano Pro - Empresa A', amount: 850.00, date: '12 Maio, 2026', status: 'Recebido' },
-    { id: 2, description: 'Servidores AWS', amount: -240.50, date: '11 Maio, 2026', status: 'Concluído' },
-    { id: 3, description: 'Manutenção de Software', amount: -300.00, date: '10 Maio, 2026', status: 'Pendente' },
-    { id: 4, description: 'Consultoria Inicial', amount: 1200.00, date: '08 Maio, 2026', status: 'Recebido' },
-  ];
+interface Activity {
+  id: number;
+  description: string;
+  amount: number;
+  date: string;
+  status: string;
+}
+
+async function getFinancialActivities(token: string | undefined): Promise<Activity[]> {
+  if (!token) return [];
+
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'http://localhost:3000';
+
+  try {
+    const res = await fetch(`${baseUrl}/api/atividades`, {
+      headers: {
+        Cookie: `jwt-token=${token}`
+      },
+      cache: 'no-store'
+    });
+
+    if (!res.ok) return [];
+    return res.json();
+  } catch (error) {
+    console.error("Erro ao buscar atividades:", error);
+    return [];
+  }
 }
 
 export default async function DashboardPage() {
@@ -19,7 +40,7 @@ export default async function DashboardPage() {
   if (!token) redirect('/login');
   
   const user = await verifyToken(token);
-  const activities = await getFinancialActivities();
+  const activities = await getFinancialActivities(token);
 
   const totalIncome = activities.filter(a => a.amount > 0).reduce((acc, curr) => acc + curr.amount, 0);
   const totalExpense = activities.filter(a => a.amount < 0).reduce((acc, curr) => acc + curr.amount, 0);
@@ -84,43 +105,49 @@ export default async function DashboardPage() {
           </div>
           
           <div className="divide-y divide-slate-100">
-            {activities.map((activity) => {
-              const isIncome = activity.amount > 0;
-              
-              return (
-                <div key={activity.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                      {isIncome ? (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
-                      ) : (
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" /></svg>
-                      )}
+            {activities.length === 0 ? (
+              <div className="p-6 text-center text-slate-500 text-sm">
+                Nenhuma transação encontrada.
+              </div>
+            ) : (
+              activities.map((activity) => {
+                const isIncome = activity.amount > 0;
+                
+                return (
+                  <div key={activity.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                        {isIncome ? (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
+                        ) : (
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" /></svg>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{activity.description}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{activity.date}</p>
+                      </div>
                     </div>
-                    
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{activity.description}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{activity.date}</p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <p className={`text-sm font-bold ${isIncome ? 'text-emerald-600' : 'text-slate-900'}`}>
-                        {isIncome ? '+' : '-'} R$ {Math.abs(activity.amount).toFixed(2)}
-                      </p>
+                    <div className="flex items-center gap-6">
+                      <div className="text-right">
+                        <p className={`text-sm font-bold ${isIncome ? 'text-emerald-600' : 'text-slate-900'}`}>
+                          {isIncome ? '+' : '-'} R$ {Math.abs(activity.amount).toFixed(2)}
+                        </p>
+                      </div>
+                      
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-24 justify-center
+                        ${activity.status === 'Recebido' || activity.status === 'Concluído' 
+                          ? 'bg-emerald-100 text-emerald-800' 
+                          : 'bg-amber-100 text-amber-800'}`}>
+                        {activity.status}
+                      </span>
                     </div>
-                    
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-24 justify-center
-                      ${activity.status === 'Recebido' || activity.status === 'Concluído' 
-                        ? 'bg-emerald-100 text-emerald-800' 
-                        : 'bg-amber-100 text-amber-800'}`}>
-                      {activity.status}
-                    </span>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </main>

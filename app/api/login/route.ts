@@ -3,28 +3,39 @@ import { signToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
 
 export async function POST(request: Request) {
-  const { email, password } = await request.json();
+  try {
+    const body = await request.json();
 
-  if (email === 'admin@admin.com' && password === '123456') {
-    const cookieStore = await cookies();
+    const { email, password } = body;
 
-    const token = await signToken({
-      email,
-      role: 'admin',
-    });
+    if (email === 'admin@admin.com' && password === '123456') {
+      const cookieStore = await cookies();
 
-    cookieStore.set('jwt-token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 60 * 60 * 2,
-      path: '/',
-    });
+      const token = await signToken({
+        email,
+        role: 'admin',
+      });
 
-    return NextResponse.json({ success: true });
+      cookieStore.set('jwt-token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 2,
+        path: '/',
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json(
+      { error: 'Credenciais inválidas' },
+      { status: 401 }
+    );
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json(
-    { error: 'Credenciais inválidas' },
-    { status: 401 }
-  );
 }

@@ -1,59 +1,47 @@
 import { NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { signToken } from '@/lib/auth';
 import { cookies } from 'next/headers';
-import { kv } from '@vercel/kv';
-
-export async function GET() {
-  try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('jwt-token')?.value;
-
-    if (!token) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    
-    const user = await verifyToken(token);
-    const userEmail = user?.email as string;
-
-    const activities = await kv.get(`activities:${userEmail}`);
-
-    return NextResponse.json(activities || []);
-    
-  } catch (error) {
-    console.error('Erro na API:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
-  }
-}
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('jwt-token')?.value;
-
-    if (!token) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
-    
-    const user = await verifyToken(token);
-    const userEmail = user?.email as string;
-
     const body = await request.json();
-    
-    const newActivity = {
-      id: Date.now(),
-      description: body.description,
-      amount: Number(body.amount),
-      date: new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }).format(new Date()),
-      status: body.status || 'Pendente'
-    };
+    const { email, password } = body;
 
-    const currentActivities: any[] = (await kv.get(`activities:${userEmail}`)) || [];
-    
-    currentActivities.unshift(newActivity);
+    const adminEmail = process.env.ADMIN_EMAIL;
+    const adminPassword = process.env.ADMIN_PASSWORD;
 
-    await kv.set(`activities:${userEmail}`, currentActivities);
+    if (!adminEmail || !adminPassword) {
+      console.error("Erro: ADMIN_EMAIL ou ADMIN_PASSWORD não foram configurados no ambiente.");
+      return NextResponse.json(
+        { error: 'Erro de configuração no servidor' },
+        { status: 500 }
+      );
+    }
 
-    return NextResponse.json(newActivity, { status: 201 });
-    
+    if (email === adminEmail && password === adminPassword) {
+      const cookieStore = await cookies();
+
+      const token = await signToken({
+        email,
+        role: 'admin',
+      });
+
+      cookieStore.set('jwt-token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 60 * 60 * 2,
+        path: '/',
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json(
+      { error: 'Credenciais inválidas' },
+      { status: 401 }
+    );
   } catch (error) {
     console.error(error);
-    
     return NextResponse.json(
       { error: 'Erro interno do servidor' },
       { status: 500 }

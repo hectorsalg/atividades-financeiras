@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyToken } from '@/lib/auth';
+import { AddActivityForm } from '@/components/AddActivityForm';
 
 interface Activity {
   id: number;
@@ -75,6 +76,8 @@ export default async function DashboardPage() {
           <p className="text-slate-500 text-sm mt-1">Acompanhe suas métricas e atividades recentes.</p>
         </div>
 
+        <AddActivityForm />
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-xl p-6 border border-slate-200 shadow-sm">
             <h3 className="text-sm font-medium text-slate-500 mb-2">Saldo Atual</h3>
@@ -101,7 +104,6 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50/50">
             <h2 className="text-lg font-semibold text-slate-900">Últimas Transações</h2>
-            <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700">Ver todas</button>
           </div>
           
           <div className="divide-y divide-slate-100">

@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { verifyToken } from '@/lib/auth';
 import { AddActivityForm } from '@/components/AddActivityForm';
+import { ActivityItem } from '@/components/ActivityItem';
 
 interface Activity {
   id: number;
@@ -112,43 +113,9 @@ export default async function DashboardPage() {
                 Nenhuma transação encontrada.
               </div>
             ) : (
-              activities.map((activity) => {
-                const isIncome = activity.amount > 0;
-                
-                return (
-                  <div key={activity.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isIncome ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
-                        {isIncome ? (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" /></svg>
-                        ) : (
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" /></svg>
-                        )}
-                      </div>
-                      
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{activity.description}</p>
-                        <p className="text-xs text-slate-500 mt-0.5">{activity.date}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-6">
-                      <div className="text-right">
-                        <p className={`text-sm font-bold ${isIncome ? 'text-emerald-600' : 'text-slate-900'}`}>
-                          {isIncome ? '+' : '-'} R$ {Math.abs(activity.amount).toFixed(2)}
-                        </p>
-                      </div>
-                      
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium w-24 justify-center
-                        ${activity.status === 'Recebido' || activity.status === 'Concluído' 
-                          ? 'bg-emerald-100 text-emerald-800' 
-                          : 'bg-amber-100 text-amber-800'}`}>
-                        {activity.status}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
+              activities.map((activity) => (
+                <ActivityItem key={activity.id} activity={activity} />
+              ))
             )}
           </div>
         </div>

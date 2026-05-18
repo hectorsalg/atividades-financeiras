@@ -43,7 +43,6 @@ export function AddActivityForm() {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-8">
-      {/* Utilizamos CSS Grid para garantir um alinhamento perfeito em qualquer ecrã */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
         
         <div className="md:col-span-5">
@@ -65,7 +64,16 @@ export function AddActivityForm() {
             type="number" 
             step="0.01"
             value={formData.amount}
-            onChange={(e) => setFormData({...formData, amount: e.target.value})}
+            onChange={(e) => {
+              const newAmountStr = e.target.value;
+              const newAmount = Number(newAmountStr);
+              setFormData({
+                ...formData, 
+                amount: newAmountStr,
+                // Altera o status para "Pendente" se ficar negativo enquanto "Recebido" estiver ativo
+                status: newAmount < 0 && formData.status === 'Recebido' ? 'Pendente' : formData.status
+              });
+            }}
             className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 font-medium placeholder:text-slate-400 placeholder:font-normal transition-shadow"
             placeholder="Ex: 150.00 ou -50.00"
           />
@@ -78,7 +86,9 @@ export function AddActivityForm() {
             onChange={(e) => setFormData({...formData, status: e.target.value})}
             className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 font-medium bg-white transition-shadow cursor-pointer"
           >
-            <option value="Recebido" className="font-medium text-slate-900">Recebido</option>
+            {(formData.amount === '' || Number(formData.amount) >= 0) && (
+              <option value="Recebido" className="font-medium text-slate-900">Recebido</option>
+            )}
             <option value="Pendente" className="font-medium text-slate-900">Pendente</option>
             <option value="Concluído" className="font-medium text-slate-900">Concluído</option>
           </select>

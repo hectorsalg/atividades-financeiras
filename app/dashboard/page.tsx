@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { verifyToken } from '@/lib/auth';
 import { AddActivityForm } from '@/components/AddActivityForm';
 import { ActivityItem } from '@/components/ActivityItem';
+import { kv } from '@vercel/kv';
 
 interface Activity {
   id: number;
@@ -12,25 +13,14 @@ interface Activity {
   status: string;
 }
 
-async function getFinancialActivities(token: string | undefined): Promise<Activity[]> {
-  if (!token) return [];
-
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : 'http://localhost:3000';
+async function getFinancialActivities(email: string | undefined): Promise<Activity[]> {
+  if (!email) return [];
 
   try {
-    const res = await fetch(`${baseUrl}/api/atividades`, {
-      headers: {
-        Cookie: `jwt-token=${token}`
-      },
-      cache: 'no-store'
-    });
-
-    if (!res.ok) return [];
-    return res.json();
+    const activities: Activity[] = (await kv.get(`activities:${email}`)) || [];
+    return activities;
   } catch (error) {
-    console.error("Erro ao buscar atividades:", error);
+    console.error("Erro ao buscar atividades no KV:", error);
     return [];
   }
 }
@@ -42,7 +32,8 @@ export default async function DashboardPage() {
   if (!token) redirect('/login');
   
   const user = await verifyToken(token);
-  const activities = await getFinancialActivities(token);
+  if (!user || !user.email) redirect('/login');
+  const activities = await getFinancialActivities(user.email as string);
 
   const totalIncome = activities.filter(a => a.amount > 0).reduce((acc, curr) => acc + curr.amount, 0);
   const totalExpense = activities.filter(a => a.amount < 0).reduce((acc, curr) => acc + curr.amount, 0);
@@ -61,10 +52,10 @@ export default async function DashboardPage() {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-slate-500 hidden sm:block">
-                {user?.email as string}
+                {user.email as string}
               </span>
               <div className="w-9 h-9 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-700 font-bold">
-                {typeof user?.email === 'string' ? user.email.charAt(0).toUpperCase() : 'U'}
+                {typeof user.email === 'string' ? user.email.charAt(0).toUpperCase() : 'U'}
               </div>
             </div>
           </div>
